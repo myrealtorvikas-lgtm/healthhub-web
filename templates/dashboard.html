@@ -1,0 +1,118 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Health Hub</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="wrap">
+  <div class="topnav">
+    <span class="brand">Health Hub</span>
+    <a class="small" href="{{ url_for('logout') }}">Sign out</a>
+  </div>
+
+  {% with messages = get_flashed_messages() %}
+    {% if messages %}{% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}{% endif %}
+  {% endwith %}
+
+  <div class="hero">
+    <p class="eyebrow">Dashboard</p>
+    <h1>{{ 'Hi ' + user.first_name if user.first_name else 'Your dashboard' }}</h1>
+  </div>
+
+  <div class="card">
+    <p class="card-title">Your report</p>
+    <p class="card-hint">Built from whatever you've imported or typed in below — blood work, glucose, DEXA, and (once uploaded) your Whoop/Oura export.</p>
+    <a class="btn btn-primary" href="{{ url_for('report') }}">See my report</a>
+  </div>
+
+  <div class="card">
+    <p class="card-title">Import your data</p>
+    <p class="card-hint">Same file formats as the local Health Hub app — CGM export, Quest PDF, DEXA PDF.</p>
+    <div class="btn-row">
+      <a class="btn btn-ghost" href="{{ url_for('import_cgm_page') }}">Import CGM / glucose</a>
+      <a class="btn btn-ghost" href="{{ url_for('import_labs_page') }}">Import blood work (PDF)</a>
+      <a class="btn btn-ghost" href="{{ url_for('import_dexa_page') }}">Import DEXA scan</a>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="card-title">Whoop, Oura &amp; Apple Health</p>
+    <p class="card-hint">Export your data from each app (Whoop: Settings &rarr; Data Export; Oura: cloud.ouraring.com &rarr; Export; Apple Health: Health app &rarr; profile &rarr; Export All Health Data) and upload the file here. These are saved safely, but automatic reading of them into your report is still being built and tested — nothing from these files shows up in your report yet.</p>
+    <div class="btn-row">
+      {% for kind, label in [('whoop_export', 'Upload Whoop export'), ('oura_export', 'Upload Oura export'), ('apple_health', 'Upload Apple Health export')] %}
+        <form class="export-upload-form" data-kind="{{ kind }}" style="display:inline-flex; align-items:center; gap:8px;">
+          <input type="file" name="file" required>
+          <button class="btn btn-ghost" type="submit">{{ label }}</button>
+          {% if latest_by_kind.get(kind) %}
+            <span class="unit">last: {{ latest_by_kind[kind].original_filename }}</span>
+          {% endif %}
+        </form>
+      {% endfor %}
+    </div>
+    <script>
+      document.querySelectorAll('.export-upload-form').forEach(function (form) {
+        form.addEventListener('submit', function (e) {
+          e.preventDefault();
+          var data = new FormData();
+          data.append('kind', form.dataset.kind);
+          data.append('file', form.querySelector('input[type=file]').files[0]);
+          fetch("{{ url_for('api_import_export_file') }}", { method: 'POST', body: data })
+            .then(function (r) { return r.json(); })
+            .then(function (j) {
+              alert(j.ok ? j.note : (j.error || 'Upload failed'));
+              if (j.ok) window.location.reload();
+            });
+        });
+      });
+    </script>
+  </div>
+
+  <div class="card">
+    <p class="card-title">Blood work &amp; body basics</p>
+    <p class="card-hint">Optional — Whoop doesn't have this, so it's typed in by hand. Everything's optional; leave blank what you don't know. General adult reference ranges only, not a diagnosis — check your own lab's printed range and talk to a doctor about anything that concerns you.</p>
+    <form action="{{ url_for('manual_entry') }}" method="post">
+      <div class="field-grid" style="margin-bottom:14px;">
+        <div class="field">
+          <label for="sex">Sex</label>
+          <select id="sex" name="sex">
+            <option value="" {{ 'selected' if not manual or not manual.sex }}>Prefer not to say</option>
+            <option value="female" {{ 'selected' if manual and manual.sex == 'female' }}>Female</option>
+            <option value="male" {{ 'selected' if manual and manual.sex == 'male' }}>Male</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="height_cm">Height <span class="unit">(cm)</span></label>
+          <input type="number" step="0.5" id="height_cm" name="height_cm" value="{{ manual.height_cm if manual else '' }}">
+        </div>
+        <div class="field">
+          <label for="weight_kg">Weight <span class="unit">(kg)</span></label>
+          <input type="number" step="0.1" id="weight_kg" name="weight_kg" value="{{ manual.weight_kg if manual else '' }}">
+        </div>
+      </div>
+      <p class="subhead">Recent blood work</p>
+      <div class="field-grid">
+        {% for marker_id, label, unit in marker_defs %}
+          <div class="field">
+            <label for="marker_{{ marker_id }}">{{ label }} <span class="unit">({{ unit }})</span></label>
+            <input type="number" step="any" id="marker_{{ marker_id }}" name="marker_{{ marker_id }}"
+                   value="{{ (manual.blood_markers.get(marker_id) if manual and manual.blood_markers else '') }}">
+          </div>
+        {% endfor %}
+      </div>
+      <div class="btn-row">
+        <button class="btn btn-primary" type="submit">Save</button>
+      </div>
+    </form>
+  </div>
+
+  <footer>
+    <p><strong>How your data is handled:</strong> everything you upload or type in here is stored under your own account only — nobody else who uses this app can see it. Your password is hashed, never stored in plain text.</p>
+  </footer>
+</div>
+</body>
+</html>
