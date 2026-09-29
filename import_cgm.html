@@ -1,0 +1,51 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Health Hub — Import CGM</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="wrap">
+  <div class="topnav"><span class="brand">Health Hub</span><a class="small" href="{{ url_for('dashboard') }}">← Dashboard</a></div>
+
+  <div class="hero">
+    <p class="eyebrow">Import</p>
+    <h1>CGM / glucose readings</h1>
+    <p class="sub">Upload a CSV export from the Lingo app or libreview.com. You already have {{ recent_count }} reading{{ '' if recent_count == 1 else 's' }} saved.</p>
+  </div>
+
+  <div class="card">
+    <p class="card-title">Upload a CSV</p>
+    <p class="card-hint">Export from the Lingo phone app, or download the fuller report from libreview.com. Either format works — it's auto-detected. Already-imported readings are skipped automatically, so it's safe to re-upload the same file.</p>
+    <input type="file" id="cgm-file" accept=".csv" style="margin-bottom:12px;">
+    <div class="btn-row">
+      <button class="btn btn-primary" id="cgm-upload-btn">Import</button>
+    </div>
+    <div id="cgm-result" style="margin-top:14px;"></div>
+  </div>
+</div>
+<script>
+document.getElementById('cgm-upload-btn').addEventListener('click', async function () {
+  var fileInput = document.getElementById('cgm-file');
+  var resultEl = document.getElementById('cgm-result');
+  if (!fileInput.files.length) { resultEl.innerHTML = '<div class="empty">Choose a CSV file first.</div>'; return; }
+  var fd = new FormData();
+  fd.append('file', fileInput.files[0]);
+  resultEl.innerHTML = '<div class="empty">Importing…</div>';
+  try {
+    var resp = await fetch('{{ url_for("api_import_cgm") }}', { method: 'POST', body: fd });
+    var data = await resp.json();
+    if (!data.ok) { resultEl.innerHTML = '<div class="disclaimer-box">' + data.error + '</div>'; return; }
+    resultEl.innerHTML = '<div class="card-hint" style="color:var(--good);">Imported ' + data.readings_imported + ' new readings and ' + data.events_imported + ' events' +
+      (data.rows_skipped ? (' (' + data.rows_skipped + ' rows skipped — usually blank or unparseable lines).') : '.') + '</div>';
+  } catch (e) {
+    resultEl.innerHTML = '<div class="disclaimer-box">Something went wrong importing that file. Try again in a moment.</div>';
+  }
+});
+</script>
+</body>
+</html>

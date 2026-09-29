@@ -1,0 +1,52 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Health Hub — Create account</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    .login-wrap { max-width: 420px; margin: 0 auto; padding: 60px 20px; text-align: center; }
+    .login-wrap h1 { margin-bottom: 10px; }
+    .login-wrap p.sub { color: var(--text-dim); margin-bottom: 30px; }
+    .login-form { text-align: left; }
+    .login-form .field { margin-bottom: 14px; }
+    .login-form label { display: block; font-size: 12.5px; font-weight: 600; margin-bottom: 4px; }
+    .login-form input { width: 100%; }
+    .login-footer { margin-top: 18px; font-size: 13.5px; color: var(--text-dim); }
+  </style>
+</head>
+<body>
+  <div class="login-wrap">
+    <p class="eyebrow">Health Hub</p>
+    <h1>Create your account</h1>
+    <p class="sub">Just you and your own data — nobody else who uses this app can see it.</p>
+
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <form class="login-form" action="{{ url_for('signup') }}" method="post">
+      <div class="field">
+        <label for="first_name">First name <span class="unit">(optional)</span></label>
+        <input type="text" id="first_name" name="first_name" value="{{ first_name or '' }}">
+      </div>
+      <div class="field">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" value="{{ email or '' }}" required autofocus>
+      </div>
+      <div class="field">
+        <label for="password">Password <span class="unit">(at least 8 characters)</span></label>
+        <input type="password" id="password" name="password" minlength="8" required>
+      </div>
+      <button class="btn btn-primary" type="submit" style="width:100%; justify-content:center;">Create account</button>
+    </form>
+
+    <p class="login-footer">Already have an account? <a href="{{ url_for('login') }}">Sign in</a></p>
+  </div>
+</body>
+</html>

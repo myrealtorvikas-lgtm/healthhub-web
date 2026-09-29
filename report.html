@@ -1,0 +1,419 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Health Hub — Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<div class="wrap">
+  <div class="topnav">
+    <span class="brand">Health Hub</span>
+    <a class="small" href="{{ url_for('dashboard') }}">← Dashboard</a>
+  </div>
+
+  <div class="hero">
+    <p class="eyebrow">Report</p>
+    <h1 id="greeting">Your report</h1>
+    <p class="sub" id="generated-note"></p>
+  </div>
+
+  <div class="stat-row" id="stat-row"></div>
+
+  <section id="recovery-section">
+    <div class="section-head"><p class="eyebrow" style="color:var(--accent-2)">Recovery</p><h2>How ready your body says it is</h2></div>
+    <div class="card">
+      <div class="range-toggle" id="recovery-range-toggle">
+        <button data-days="30" class="active">30D</button><button data-days="90">90D</button><button data-days="null">All</button>
+      </div>
+      <svg id="recovery-chart" viewBox="0 0 640 180" style="width:100%;height:auto;"></svg>
+      <p class="card-hint" id="recovery-hint" style="margin-top:10px;"></p>
+    </div>
+  </section>
+
+  <section id="hrv-section">
+    <div class="section-head"><p class="eyebrow" style="color:var(--accent-2)">Heart rate variability</p><h2>HRV over time</h2></div>
+    <div class="card">
+      <div class="range-toggle" id="hrv-range-toggle">
+        <button data-days="30" class="active">30D</button><button data-days="90">90D</button><button data-days="null">All</button>
+      </div>
+      <svg id="hrv-chart" viewBox="0 0 640 180" style="width:100%;height:auto;"></svg>
+      <p class="card-hint" id="hrv-hint" style="margin-top:10px;"></p>
+    </div>
+  </section>
+
+  <section id="sleep-section">
+    <div class="section-head"><p class="eyebrow" style="color:var(--accent-2)">Sleep</p><h2>How you're sleeping</h2></div>
+    <div class="card">
+      <div class="range-toggle" id="sleep-range-toggle">
+        <button data-days="30" class="active">30D</button><button data-days="90">90D</button><button data-days="null">All</button>
+      </div>
+      <svg id="sleep-chart" viewBox="0 0 640 180" style="width:100%;height:auto;"></svg>
+      <p class="card-hint" id="sleep-hint" style="margin-top:10px;"></p>
+      <div class="stat-strip" id="sleep-stats"></div>
+      <div id="sleep-stage-wrap"></div>
+    </div>
+  </section>
+
+  <section id="strain-section">
+    <div class="section-head"><p class="eyebrow" style="color:var(--accent-2)">Strain &amp; workouts</p><h2>What you put in</h2></div>
+    <div class="card">
+      <div class="range-toggle" id="strain-range-toggle">
+        <button data-days="30" class="active">30D</button><button data-days="90">90D</button><button data-days="null">All</button>
+      </div>
+      <svg id="strain-chart" viewBox="0 0 640 180" style="width:100%;height:auto;"></svg>
+      <p class="card-hint" id="strain-hint" style="margin-top:10px;"></p>
+    </div>
+    <div class="card">
+      <p class="card-title">Recent workouts</p>
+      <div id="workouts-list"></div>
+    </div>
+  </section>
+
+  <section id="glucose-section">
+    <div class="section-head"><p class="eyebrow" style="color:var(--accent-2)">Glucose</p><h2>Blood sugar, from your CGM</h2></div>
+    <div class="card">
+      <div class="range-toggle" id="glucose-range-toggle">
+        <button data-days="30" class="active">30D</button><button data-days="90">90D</button><button data-days="null">All</button>
+      </div>
+      <svg id="glucose-chart" viewBox="0 0 640 180" style="width:100%;height:auto;"></svg>
+      <p class="card-hint" id="glucose-hint" style="margin-top:10px;"></p>
+      <div class="stat-strip" id="glucose-stats"></div>
+      <p class="card-hint"><a href="{{ url_for('import_cgm_page') }}">Import more CGM data</a></p>
+    </div>
+  </section>
+
+  <section id="body-section">
+    <div class="section-head"><p class="eyebrow" style="color:var(--accent-2)">Your numbers</p><h2>Blood work &amp; body basics</h2></div>
+    <div class="card" id="body-card"></div>
+    <div class="card">
+      <p class="card-title">Blood work, marker by marker</p>
+      <p class="card-hint">General adult reference ranges — your own lab's printed range is always the one to trust first. <a href="{{ url_for('dashboard') }}">Add or update yours</a>.</p>
+      <div id="blood-results"></div>
+    </div>
+    <div class="card" id="imported-labs-card">
+      <p class="card-title">Most recent imported lab panel</p>
+      <div id="imported-labs-body"></div>
+      <p class="card-hint" style="margin-top:10px;"><a href="{{ url_for('import_labs_page') }}">Import a lab PDF</a></p>
+    </div>
+    <div class="card" id="dexa-card">
+      <p class="card-title">Most recent DEXA scan</p>
+      <div id="dexa-body"></div>
+      <p class="card-hint" style="margin-top:10px;"><a href="{{ url_for('import_dexa_page') }}">Import a DEXA scan</a></p>
+    </div>
+  </section>
+
+  <section id="routine">
+    <div class="section-head">
+      <p class="eyebrow" style="color:var(--accent-2)">Daily routine</p>
+      <h2>A day, start to finish</h2>
+      <p class="takeaway">A general-purpose routine to borrow from and adapt — waking, eating, moving, and winding down.</p>
+    </div>
+    <div class="card"><div class="food-timeline" id="routine-timeline"></div></div>
+    <div class="card">
+      <p class="card-title">Vitamins &amp; minerals</p>
+      <p class="card-hint">Approximate doses, put together from what's publicly reported — formulations and amounts change over time. Check with a doctor before adding anything.</p>
+      <p class="subhead" style="color:var(--accent);">Vitamins</p>
+      <div class="food-supp-row" id="routine-vitamins-row"></div>
+      <p class="subhead" style="color:var(--accent-2); margin-top:16px;">Minerals</p>
+      <div class="food-supp-row" id="routine-minerals-row"></div>
+    </div>
+    <div class="card">
+      <p class="card-title">The rest of the stack, by time of day</p>
+      <p class="card-hint">Beyond the core vitamins and minerals above. Treat this as a menu to pick from, not a checklist.</p>
+      <div class="food-timeline" id="stack-timeline"></div>
+      <div id="stack-rx-warning"></div>
+    </div>
+  </section>
+
+  <footer>
+    <p>This report is general, educational information from your own Whoop data and anything you typed in. It is not a diagnosis, not personalized medical advice, and not a substitute for a doctor who knows your history.</p>
+  </footer>
+</div>
+
+<script id="report-data" type="application/json">{{ data_json | safe }}</script>
+<script>
+(function () {
+  'use strict';
+  var DATA = JSON.parse(document.getElementById('report-data').textContent);
+
+  document.getElementById('greeting').textContent = DATA.first_name ? ('Hi ' + DATA.first_name) : 'Your report';
+  document.getElementById('generated-note').textContent =
+    'Last ' + DATA.window_days + ' days, generated ' + new Date(DATA.generated_at).toLocaleString(undefined, { month: 'long', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' });
+
+  // ---- stat row ----
+  var tiles = [];
+  function tile(label, value, foot) {
+    tiles.push('<div class="stat-tile"><div class="label">' + label + '</div><div class="value">' + value + '</div>' + (foot ? '<div class="foot">' + foot + '</div>' : '') + '</div>');
+  }
+  if (DATA.recovery.has_data) tile('Recovery (30d avg)', DATA.recovery.recent_avg + '%', deltaFoot(DATA.recovery.delta, 'pts'));
+  if (DATA.hrv.has_data) tile('HRV (30d avg)', DATA.hrv.recent_avg + ' ms', deltaFoot(DATA.hrv.delta, 'ms'));
+  if (DATA.sleep.has_data) tile('Sleep perf. (30d avg)', DATA.sleep.recent_avg + '%', deltaFoot(DATA.sleep.delta, 'pts'));
+  if (DATA.strain.has_data) tile('Strain (30d avg)', DATA.strain.recent_avg, deltaFoot(DATA.strain.delta, ''));
+  document.getElementById('stat-row').innerHTML = tiles.length ? tiles.join('') : '<div class="empty">No Whoop data pulled yet.</div>';
+
+  function deltaFoot(delta, unit) {
+    if (delta == null) return 'vs. prior period: not enough history yet';
+    var sign = delta > 0 ? '+' : '';
+    return sign + delta + (unit ? ' ' + unit : '') + ' vs. the 30 days before that';
+  }
+
+  // ---- generic range-toggle line chart ----
+  function seriesFor(series, days) {
+    if (days == null) return series;
+    var last = new Date(series[series.length - 1].date + 'T00:00:00');
+    var cutoff = new Date(last.getTime() - days * 86400000);
+    return series.filter(function (p) { return new Date(p.date + 'T00:00:00') >= cutoff; });
+  }
+  function windowStats(series, valueKey, days) {
+    var win = seriesFor(series, days);
+    var vals = win.map(function (p) { return p[valueKey]; }).filter(function (v) { return v != null; });
+    var avg = vals.length ? Math.round((vals.reduce(function (a, b) { return a + b; }, 0) / vals.length) * 10) / 10 : null;
+    var delta = null;
+    if (days != null) {
+      var last = new Date(series[series.length - 1].date + 'T00:00:00');
+      var cutoff = new Date(last.getTime() - days * 86400000);
+      var priorCutoff = new Date(cutoff.getTime() - days * 86400000);
+      var priorVals = series.filter(function (p) {
+        var d = new Date(p.date + 'T00:00:00');
+        return d >= priorCutoff && d < cutoff && p[valueKey] != null;
+      }).map(function (p) { return p[valueKey]; });
+      if (priorVals.length) {
+        var priorAvg = priorVals.reduce(function (a, b) { return a + b; }, 0) / priorVals.length;
+        delta = Math.round((avg - priorAvg) * 10) / 10;
+      }
+    }
+    return { avg: avg, n: vals.length, delta: delta };
+  }
+  function drawLineChart(svgId, series, valueKey, color) {
+    var svg = document.getElementById(svgId);
+    var W = 640, H = 180, padL = 34, padR = 12, padT = 14, padB = 22;
+    var pts = series.filter(function (p) { return p[valueKey] != null; });
+    if (!pts.length) { svg.innerHTML = '<text x="20" y="90" class="axis-label" fill="currentColor">No data for this range.</text>'; return; }
+    var vals = pts.map(function (p) { return p[valueKey]; });
+    var minV = Math.min.apply(null, vals), maxV = Math.max.apply(null, vals);
+    if (minV === maxV) { minV -= 1; maxV += 1; }
+    var pad = (maxV - minV) * 0.12;
+    minV -= pad; maxV += pad;
+    var x = function (i) { return padL + (i / Math.max(1, pts.length - 1)) * (W - padL - padR); };
+    var y = function (v) { return padT + (1 - (v - minV) / (maxV - minV)) * (H - padT - padB); };
+    var linePath = pts.map(function (p, i) { return (i === 0 ? 'M' : 'L') + x(i).toFixed(1) + ',' + y(p[valueKey]).toFixed(1); }).join(' ');
+    var areaPath = linePath + ' L' + x(pts.length - 1).toFixed(1) + ',' + (H - padB) + ' L' + x(0).toFixed(1) + ',' + (H - padB) + ' Z';
+    var gridlines = '';
+    for (var g = 0; g <= 2; g++) {
+      var gy = padT + (g / 2) * (H - padT - padB);
+      gridlines += '<line x1="' + padL + '" y1="' + gy + '" x2="' + (W - padR) + '" y2="' + gy + '" class="gridline" />';
+    }
+    svg.innerHTML = gridlines +
+      '<path d="' + areaPath + '" class="trend-area" style="fill:' + color + ';opacity:0.08;" />' +
+      '<path d="' + linePath + '" class="trend-line" style="stroke:' + color + ';" />' +
+      '<circle cx="' + x(pts.length - 1) + '" cy="' + y(pts[pts.length - 1][valueKey]) + '" r="4" class="trend-dot" style="stroke:' + color + ';" />' +
+      '<text x="' + padL + '" y="12" class="axis-label" font-size="10">' + maxV.toFixed(0) + '</text>' +
+      '<text x="' + padL + '" y="' + (H - padB + 14) + '" class="axis-label" font-size="10">' + minV.toFixed(0) + '</text>';
+  }
+  function wireRangeToggle(toggleId, onSelect) {
+    var el = document.getElementById(toggleId);
+    el.querySelectorAll('button').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        el.querySelectorAll('button').forEach(function (b) { b.classList.remove('active'); });
+        btn.classList.add('active');
+        var days = btn.dataset.days === 'null' ? null : parseInt(btn.dataset.days, 10);
+        onSelect(days);
+      });
+    });
+  }
+
+  function setupTrendCard(key, chartId, toggleId, hintId, valueKey, color, unitLabel, rangeWord) {
+    var trend = DATA[key];
+    if (!trend.has_data) {
+      document.getElementById(chartId).outerHTML = '<div class="empty">No ' + key + ' data yet — keep wearing Whoop and check back.</div>';
+      document.getElementById(hintId).textContent = '';
+      document.getElementById(toggleId).style.display = 'none';
+      return;
+    }
+    function render(days) {
+      drawLineChart(chartId, trend.series, valueKey, color);
+      var w = windowStats(trend.series, valueKey, days);
+      var rangeText = days == null ? 'all available history' : ('the last ' + days + ' days');
+      var deltaText = w.delta == null ? '' : (', ' + (w.delta > 0 ? 'up ' : w.delta < 0 ? 'down ' : 'flat ') + (w.delta !== 0 ? Math.abs(w.delta) + (unitLabel ? ' ' + unitLabel : '') : '') + ' from the period before that');
+      document.getElementById(hintId).textContent = 'Averaging ' + w.avg + (unitLabel ? ' ' + unitLabel : '') + ' over ' + rangeText + deltaText + '.';
+    }
+    wireRangeToggle(toggleId, render);
+    render(30);
+  }
+
+  setupTrendCard('recovery', 'recovery-chart', 'recovery-range-toggle', 'recovery-hint', 'recovery', '#1baf7a', '%', '30 days');
+  setupTrendCard('hrv', 'hrv-chart', 'hrv-range-toggle', 'hrv-hint', 'hrv', '#2a78d6', 'ms', '30 days');
+  setupTrendCard('sleep', 'sleep-chart', 'sleep-range-toggle', 'sleep-hint', 'perf', '#e87ba4', '%', '30 days');
+  setupTrendCard('strain', 'strain-chart', 'strain-range-toggle', 'strain-hint', 'strain', '#eda100', '', '30 days');
+  setupTrendCard('glucose', 'glucose-chart', 'glucose-range-toggle', 'glucose-hint', 'glucose', '#e34948', 'mg/dL', '30 days');
+
+  if (DATA.glucose.has_data) {
+    var g = DATA.glucose;
+    var gStrip = [];
+    if (g.time_in_range_pct != null) gStrip.push({ n: g.time_in_range_pct + '%', l: 'Time in range (70–180)' });
+    gStrip.push({ n: g.total_readings.toLocaleString(), l: 'Total readings' });
+    document.getElementById('glucose-stats').innerHTML = gStrip.map(function (b) {
+      return '<div class="item"><div class="n">' + b.n + '</div><div class="l">' + b.l + '</div></div>';
+    }).join('');
+  }
+
+  // ---- sleep extras: stat strip + stage bar ----
+  if (DATA.sleep.has_data) {
+    var s = DATA.sleep;
+    var stripBits = [];
+    if (s.consistency != null) stripBits.push({ n: s.consistency + '%', l: 'Consistency' });
+    if (s.efficiency != null) stripBits.push({ n: s.efficiency + '%', l: 'Efficiency' });
+    if (s.avg_debt_hrs != null) stripBits.push({ n: s.avg_debt_hrs + 'h', l: 'Avg. sleep debt' });
+    if (s.respiratory_rate != null) stripBits.push({ n: s.respiratory_rate, l: 'Resp. rate' });
+    document.getElementById('sleep-stats').innerHTML = stripBits.map(function (b) {
+      return '<div class="item"><div class="n">' + b.n + '</div><div class="l">' + b.l + '</div></div>';
+    }).join('');
+
+    if (s.stages) {
+      var total = s.stages.rem + s.stages.sws + s.stages.light + s.stages.awake;
+      var segs = [
+        { k: 'rem', label: 'REM', color: '#4a3aa7' },
+        { k: 'sws', label: 'Deep', color: '#2a78d6' },
+        { k: 'light', label: 'Light', color: '#eda100' },
+        { k: 'awake', label: 'Awake', color: '#e34948' },
+      ];
+      var bar = segs.map(function (seg) {
+        var pct = total ? (s.stages[seg.k] / total * 100) : 0;
+        return '<div style="width:' + pct.toFixed(1) + '%;background:' + seg.color + ';"></div>';
+      }).join('');
+      var legend = segs.map(function (seg) {
+        return '<span><span class="sw" style="background:' + seg.color + ';"></span>' + seg.label + ' — ' + s.stages[seg.k] + ' min</span>';
+      }).join('');
+      document.getElementById('sleep-stage-wrap').innerHTML =
+        '<div class="stage-bar-track">' + bar + '</div><div class="stage-legend">' + legend + '</div>';
+    }
+  }
+
+  // ---- workouts list ----
+  if (DATA.workouts.has_data) {
+    document.getElementById('workouts-list').innerHTML = DATA.workouts.recent.map(function (w) {
+      return '<div class="workout-row"><span class="w-sport">' + w.sport + '</span>' +
+        '<span class="w-meta">' + w.date + '</span>' +
+        (w.minutes != null ? '<span class="w-meta">' + w.minutes + ' min</span>' : '') +
+        (w.strain != null ? '<span class="w-meta">strain ' + w.strain + '</span>' : '') +
+        (w.avg_hr != null ? '<span class="w-meta">' + w.avg_hr + ' bpm avg</span>' : '') + '</div>';
+    }).join('');
+  } else {
+    document.getElementById('workouts-list').innerHTML = '<div class="empty">No logged workouts in this window.</div>';
+  }
+
+  // ---- body basics + blood work (already classified server-side) ----
+  var bodyCard = document.getElementById('body-card');
+  if (DATA.body.has_data) {
+    bodyCard.innerHTML = '<p class="card-title">Body basics</p>' +
+      '<div class="result-row"><div class="rr-main"><div class="rr-name">BMI</div><div class="rr-value">' + DATA.body.bmi + '</div><div class="rr-note">' + DATA.body.note + '</div></div><span class="pill ' + DATA.body.status + '">' + DATA.body.label + '</span></div>';
+  } else {
+    bodyCard.innerHTML = '<p class="card-title">Body basics</p><div class="empty">Add your height and weight on the dashboard to see BMI here.</div>';
+  }
+
+  var bloodEl = document.getElementById('blood-results');
+  if (DATA.watch && DATA.watch.length) {
+    bloodEl.innerHTML = DATA.watch.map(function (m) {
+      return '<div class="result-row"><div class="rr-main"><div class="rr-name">' + m.name + '</div><div class="rr-value">' + m.value + ' ' + m.unit + '</div><div class="rr-note">' + m.note + '</div></div><span class="pill ' + m.status + '">' + m.label + '</span></div>';
+    }).join('');
+  } else {
+    bloodEl.innerHTML = '<div class="empty">No blood work entered yet.</div>';
+  }
+
+  var importedLabsEl = document.getElementById('imported-labs-body');
+  if (DATA.imported_labs.has_data) {
+    importedLabsEl.innerHTML = '<p class="card-hint" style="margin-bottom:10px;">Collected ' + DATA.imported_labs.collected_date + ' — raw values as extracted from the PDF, not run through the plain-English read above. <span style="color:var(--text-muted);">(Matching these up with the marker-by-marker read above is a good next step, not done automatically yet.)</span></p>' +
+      DATA.imported_labs.results.map(function (r) {
+        var range = '';
+        if (r.ref_low != null && r.ref_high != null) range = r.ref_low + '–' + r.ref_high;
+        else if (r.ref_low != null) range = '>' + r.ref_low;
+        else if (r.ref_high != null) range = '<' + r.ref_high;
+        return '<div class="result-row"><div class="rr-main"><div class="rr-name">' + r.analyte + '</div><div class="rr-value">' + (r.value != null ? r.value : r.value_text) + ' ' + (r.unit || '') + (range ? (' (ref ' + range + ')') : '') + '</div></div>' +
+          (r.flag ? '<span class="pill warning">' + r.flag + '</span>' : '') + '</div>';
+      }).join('');
+  } else {
+    importedLabsEl.innerHTML = '<div class="empty">No imported lab PDF yet.</div>';
+  }
+
+  var dexaEl = document.getElementById('dexa-body');
+  if (DATA.dexa.has_data) {
+    dexaEl.innerHTML = '<p class="card-hint" style="margin-bottom:10px;">Scanned ' + DATA.dexa.scan_date + '</p>' +
+      DATA.dexa.results.map(function (r) {
+        return '<div class="result-row"><div class="rr-main"><div class="rr-name">' + r.metric + '</div><div class="rr-value">' + r.value + ' ' + (r.unit || '') + '</div></div></div>';
+      }).join('');
+  } else {
+    dexaEl.innerHTML = '<div class="empty">No imported DEXA scan yet.</div>';
+  }
+
+  // -----------------------------------------------------------------------
+  // Daily routine + supplement reference — static content, same as the
+  // standalone Health Snapshot artifact.
+  // -----------------------------------------------------------------------
+  var TIMELINE = [
+    { time: 'On waking', title: 'Hydrate, then oral hygiene', items: ['750 ml warm water within the first hour of waking', 'Water pik, floss, brush, tongue scraper — before anything else touches your mouth'], rules: ['No food until the next two steps are done — water only'] },
+    { time: '~6 min', title: 'Light exposure', items: ['Bright light or real daylight — outside, or by a window, before checking your phone'], rules: [] },
+    { time: '~6 min', title: 'Breathwork', items: ['A breathing exercise or short meditation, done on an empty stomach, before opening any screen'], rules: [] },
+    { time: 'Morning', title: 'Exercise', items: ['Whatever mix of cardio, strength, and stretching/balance work fits the day'], rules: ['Move before you eat, not after'] },
+    { time: 'Optional', title: 'Heat exposure', items: ['15–20 minutes of sauna or another heat source, if available'], rules: [] },
+    { time: '8:30 AM', title: 'Breakfast', items: ['Pre-breakfast: 1/4 tsp black cumin seed powder', 'Overnight oats or a green smoothie'], rules: ['Oil-free', 'No caffeine with breakfast', '25g leafy greens at least 4x a week'] },
+    { time: '11:00 AM', title: 'Mid-morning snack', items: ['Matcha tea with lemon', '1/2 boiled sweet potato or black chana', '1 tbsp nutritional yeast'], rules: [] },
+    { time: '2–3 PM', title: 'Lunch', items: ['Big salad with walnuts, ginger, microgreens', 'One serving lentils/pulses + one whole grain'], rules: ['ACV in water before lunch', '15-minute walk after lunch', 'Cover 5,000 steps before dinner'] },
+    { time: '4–5 PM', title: 'Afternoon snack', items: ['Herbal tea', '1 Brazil nut', '8–10 soaked goji berries'], rules: [] },
+    { time: 'Evening', title: 'Skincare &amp; oral hygiene, again', items: ['Cleanser, serum, moisturizer', 'Water pik, floss, brush, tongue scraper again'], rules: [] },
+    { time: '60 min before bed', title: 'Wind-down begins', items: ['All screens off', 'Something low-stimulation: reading, a walk, stretching', '5–10 minutes of slow breathing'], rules: [] },
+    { time: '7:30 PM', title: 'Dinner', items: ['A light soup from 3 vegetables, one cruciferous', 'Beans/lentils (or tofu) + a grain if still hungry'], rules: ['Finished by 8 PM', '10-minute walk before sleep'] },
+    { time: '~20 min before bed', title: 'Read, then lights out', items: ['10–20 minutes with a physical book, not a screen', 'A fixed bedtime, same time every night'], rules: [] }
+  ];
+  document.getElementById('routine-timeline').innerHTML = TIMELINE.map(function (block) {
+    return '<div class="food-tl-item"><div class="food-tl-time">' + block.time + '</div><div class="food-tl-body">' +
+      '<div class="food-tl-title">' + block.title + '</div>' +
+      '<ul class="food-tl-items">' + block.items.map(function (i) { return '<li>' + i + '</li>'; }).join('') + '</ul>' +
+      (block.rules.length ? '<div class="food-tl-rules">' + block.rules.map(function (r) { return '<span>' + r + '</span>'; }).join('') + '</div>' : '') +
+      '</div></div>';
+  }).join('');
+
+  var VITAMINS = [
+    { name: 'Vitamin D3', dose: '2,000 IU (50 mcg)/day' }, { name: 'Vitamin C', dose: '250–500 mg/day' },
+    { name: 'Vitamin E', dose: '~67 mg/day' }, { name: 'Vitamin K1', dose: '~1,500 mcg/day' },
+    { name: 'Vitamin K2 (MK-4)', dose: '5 mg/day' }, { name: 'Vitamin K2 (MK-7)', dose: '600 mcg/day' },
+    { name: 'B-complex', dose: 'Clinical-trial doses, a few times a week' }
+  ];
+  var MINERALS = [
+    { name: 'Zinc', dose: '15 mg/day' }, { name: 'Iodine', dose: '~125–200 mcg/day' },
+    { name: 'Magnesium', dose: '~150–265 mg/day' }, { name: 'Calcium', dose: '~400 mg/day' },
+    { name: 'Selenium', dose: '~28 mcg/day' }, { name: 'Iron (heme)', dose: '~10 mg/day' }
+  ];
+  document.getElementById('routine-vitamins-row').innerHTML = VITAMINS.map(function (v) { return '<div class="food-supp-tile"><div class="fs-name">' + v.name + '</div><div class="fs-dose">' + v.dose + '</div></div>'; }).join('');
+  document.getElementById('routine-minerals-row').innerHTML = MINERALS.map(function (v) { return '<div class="food-supp-tile"><div class="fs-name">' + v.name + '</div><div class="fs-dose">' + v.dose + '</div></div>'; }).join('');
+
+  var STACK_TIMELINE = [
+    { time: 'Morning', title: 'NAD+, antioxidants &amp; plant compounds', items: ['NMN or NR — 500 mg, ~6x/week', 'CoQ10 — 100 mg', 'Ashwagandha — 600 mg', 'Omega-3 (EPA) — 500 mg', 'Fisetin — 200 mg', 'Spermidine — 10 mg', 'Ginger root — 2.2 g', 'Garlic — 2.4 g'] },
+    { time: 'Evening, with dinner', title: 'Joint, amino acid &amp; antioxidant support', items: ['Cocoa flavanols — 500 mg', 'Glucosamine sulfate — 1,500 mg', 'L-Lysine — 1 g', 'L-Tyrosine — 500 mg', 'Turmeric / curcumin — 1 g', 'Taurine — 1 g', 'NAC — 1,800 mg', 'EVOO — 30 mL'] },
+    { time: 'Bedtime', title: 'Wind-down antioxidants', items: ['Turmeric / curcumin — 1 g (2nd dose)', 'Taurine — 2 g (2nd dose)'] }
+  ];
+  document.getElementById('stack-timeline').innerHTML = STACK_TIMELINE.map(function (block) {
+    return '<div class="food-tl-item"><div class="food-tl-time">' + block.time + '</div><div class="food-tl-body">' +
+      '<div class="food-tl-title">' + block.title + '</div>' +
+      '<ul class="food-tl-items">' + block.items.map(function (i) { return '<li>' + i + '</li>'; }).join('') + '</ul>' +
+      '</div></div>';
+  }).join('');
+
+  var RX_ITEMS = [
+    { name: 'Melatonin', note: 'a hormone, not a vitamin — fine occasionally, worth a doctor’s input if used nightly' },
+    { name: 'Low-dose aspirin', note: 'cardiovascular prevention with a real bleeding-risk tradeoff — physician-guided only' },
+    { name: 'Levothyroxine / Armour Thyroid', note: 'prescription thyroid hormone replacement — only for a diagnosed thyroid condition' },
+    { name: 'Testosterone', note: 'prescription hormone replacement — requires lab-confirmed low levels and monitoring' },
+    { name: 'Acarbose', note: 'prescription diabetes medication — only for a diagnosed blood sugar condition' }
+  ];
+  document.getElementById('stack-rx-warning').innerHTML =
+    '<div class="rx-warning"><div class="rx-title">Also worth knowing about, but not on this list to try</div>' +
+    'These require a diagnosis and a doctor actively managing them.' +
+    '<ul>' + RX_ITEMS.map(function (r) { return '<li><strong>' + r.name + '</strong> — ' + r.note + '</li>'; }).join('') + '</ul></div>';
+})();
+</script>
+</body>
+</html>

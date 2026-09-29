@@ -1,0 +1,124 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Health Hub — Import DEXA</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    table.review { width: 100%; border-collapse: collapse; font-size: 13px; }
+    table.review th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-muted); padding: 6px 8px; border-bottom: 1px solid var(--border); }
+    table.review td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    table.review input[type="text"], table.review input[type="number"] { width: 100%; font-family: inherit; font-size: 13px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 5px 7px; }
+    table.review input[type="checkbox"] { width: 16px; height: 16px; }
+    tr.known .row-label { font-weight: 700; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topnav"><span class="brand">Health Hub</span><a class="small" href="{{ url_for('dashboard') }}">← Dashboard</a></div>
+
+  <div class="hero">
+    <p class="eyebrow">Import</p>
+    <h1>DEXA scan</h1>
+    <p class="sub">Upload the PDF from your scan. DEXA report layouts vary a lot by clinic, so review carefully before saving — recognized body-composition metrics are bolded and sorted to the top.</p>
+  </div>
+
+  <div class="card">
+    <p class="card-title">Upload a PDF</p>
+    <input type="file" id="dexa-file" accept=".pdf" style="margin-bottom:12px;">
+    <div class="btn-row"><button class="btn btn-primary" id="dexa-upload-btn">Extract values</button></div>
+    <div id="dexa-error" style="margin-top:14px;"></div>
+  </div>
+
+  <div class="card" id="dexa-review-card" hidden>
+    <p class="card-title">Review before saving</p>
+    <p class="card-hint">Uncheck anything that isn't a real measurement, and fix any value that looks wrong.</p>
+    <div class="field" style="max-width:220px; margin-bottom:14px;">
+      <label for="scan-date">Scan date</label>
+      <input type="date" id="scan-date">
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="review">
+        <thead><tr><th></th><th>Metric</th><th>Value</th><th>Unit</th></tr></thead>
+        <tbody id="dexa-review-rows"></tbody>
+      </table>
+    </div>
+    <div class="btn-row" style="margin-top:14px;"><button class="btn btn-primary" id="dexa-save-btn">Save this scan</button></div>
+    <div id="dexa-save-result" style="margin-top:10px;"></div>
+  </div>
+
+  <div class="card">
+    <p class="card-title">Saved scans</p>
+    {% if scans %}
+      {% for s in scans %}
+        <div class="result-row"><div class="rr-main"><div class="rr-name">{{ s.scan_date }}</div><div class="rr-value">{{ s.results|length }} metrics</div></div></div>
+      {% endfor %}
+    {% else %}
+      <div class="empty">No saved DEXA scans yet.</div>
+    {% endif %}
+  </div>
+</div>
+<script>
+var extractedFilename = null;
+
+document.getElementById('dexa-upload-btn').addEventListener('click', async function () {
+  var fileInput = document.getElementById('dexa-file');
+  var errorEl = document.getElementById('dexa-error');
+  errorEl.innerHTML = '';
+  if (!fileInput.files.length) { errorEl.innerHTML = '<div class="empty">Choose a PDF file first.</div>'; return; }
+  var fd = new FormData();
+  fd.append('file', fileInput.files[0]);
+  errorEl.innerHTML = '<div class="empty">Reading the PDF…</div>';
+  try {
+    var resp = await fetch('{{ url_for("api_import_dexa") }}', { method: 'POST', body: fd });
+    var data = await resp.json();
+    if (!data.ok) { errorEl.innerHTML = '<div class="disclaimer-box">' + data.error + '</div>'; return; }
+    errorEl.innerHTML = '';
+    extractedFilename = data.filename;
+    renderReviewRows(data.rows);
+    document.getElementById('dexa-review-card').hidden = false;
+  } catch (e) {
+    errorEl.innerHTML = '<div class="disclaimer-box">Couldn’t read that PDF. If it’s a scanned image rather than a text PDF, automatic extraction won’t work.</div>';
+  }
+});
+
+function renderReviewRows(rows) {
+  var tbody = document.getElementById('dexa-review-rows');
+  tbody.innerHTML = rows.map(function (r, i) {
+    return '<tr data-idx="' + i + '" class="' + (r.known_metric ? 'known' : '') + '">' +
+      '<td><input type="checkbox" class="row-include" ' + (r.known_metric ? 'checked' : '') + '></td>' +
+      '<td><input type="text" class="row-label" value="' + (r.label || '').replace(/"/g, '&quot;') + '"></td>' +
+      '<td><input type="number" step="any" class="row-value" value="' + (r.value != null ? r.value : '') + '"></td>' +
+      '<td><input type="text" class="row-unit" value="' + (r.unit || '') + '"></td>' +
+      '</tr>';
+  }).join('');
+}
+
+document.getElementById('dexa-save-btn').addEventListener('click', async function () {
+  var date = document.getElementById('scan-date').value;
+  var resultEl = document.getElementById('dexa-save-result');
+  if (!date) { resultEl.innerHTML = '<div class="disclaimer-box">Pick the scan date.</div>'; return; }
+  var rows = [];
+  document.querySelectorAll('#dexa-review-rows tr').forEach(function (tr) {
+    if (!tr.querySelector('.row-include').checked) return;
+    rows.push({
+      label: tr.querySelector('.row-label').value,
+      value: parseFloat(tr.querySelector('.row-value').value),
+      unit: tr.querySelector('.row-unit').value,
+    });
+  });
+  if (!rows.length) { resultEl.innerHTML = '<div class="disclaimer-box">Nothing checked — select at least one row to save.</div>'; return; }
+  var resp = await fetch('{{ url_for("api_save_dexa") }}', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ scan_date: date, rows: rows, filename: extractedFilename }),
+  });
+  var data = await resp.json();
+  if (!data.ok) { resultEl.innerHTML = '<div class="disclaimer-box">' + (data.error || 'Save failed.') + '</div>'; return; }
+  resultEl.innerHTML = '<div class="card-hint" style="color:var(--good);">Saved ' + rows.length + ' metrics. <a href="' + location.href + '">Reload</a> to see it below.</div>';
+});
+</script>
+</body>
+</html>

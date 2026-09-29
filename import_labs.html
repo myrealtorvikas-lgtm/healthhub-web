@@ -1,0 +1,131 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Health Hub — Import labs</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <style>
+    table.review { width: 100%; border-collapse: collapse; font-size: 13px; }
+    table.review th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; color: var(--text-muted); padding: 6px 8px; border-bottom: 1px solid var(--border); }
+    table.review td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+    table.review input[type="text"], table.review input[type="number"] { width: 100%; font-family: inherit; font-size: 13px; background: var(--surface-2); border: 1px solid var(--border); border-radius: 6px; padding: 5px 7px; }
+    table.review input[type="checkbox"] { width: 16px; height: 16px; }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topnav"><span class="brand">Health Hub</span><a class="small" href="{{ url_for('dashboard') }}">← Dashboard</a></div>
+
+  <div class="hero">
+    <p class="eyebrow">Import</p>
+    <h1>Blood work</h1>
+    <p class="sub">Upload the PDF from Quest (or a similar lab) — it'll try to read out the values automatically. Review and correct anything before saving, since PDF layouts vary and this is real health data.</p>
+  </div>
+
+  <div class="card">
+    <p class="card-title">Upload a PDF</p>
+    <input type="file" id="labs-file" accept=".pdf" style="margin-bottom:12px;">
+    <div class="btn-row"><button class="btn btn-primary" id="labs-upload-btn">Extract values</button></div>
+    <div id="labs-error" style="margin-top:14px;"></div>
+  </div>
+
+  <div class="card" id="labs-review-card" hidden>
+    <p class="card-title">Review before saving</p>
+    <p class="card-hint">Uncheck anything that isn't actually a lab value, and fix any number that looks wrong — PDF extraction isn't perfect.</p>
+    <div class="field" style="max-width:220px; margin-bottom:14px;">
+      <label for="collected-date">Date collected</label>
+      <input type="date" id="collected-date">
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="review">
+        <thead><tr><th></th><th>Label</th><th>Value</th><th>Unit</th><th>Reference range</th><th>Flag</th></tr></thead>
+        <tbody id="labs-review-rows"></tbody>
+      </table>
+    </div>
+    <div class="btn-row" style="margin-top:14px;"><button class="btn btn-primary" id="labs-save-btn">Save these results</button></div>
+    <div id="labs-save-result" style="margin-top:10px;"></div>
+  </div>
+
+  <div class="card">
+    <p class="card-title">Saved panels</p>
+    {% if panels %}
+      {% for p in panels %}
+        <div class="result-row"><div class="rr-main"><div class="rr-name">{{ p.collected_date }}</div><div class="rr-value">{{ p.results|length }} values</div></div></div>
+      {% endfor %}
+    {% else %}
+      <div class="empty">No saved lab panels yet.</div>
+    {% endif %}
+  </div>
+</div>
+<script>
+var extractedFilename = null;
+
+document.getElementById('labs-upload-btn').addEventListener('click', async function () {
+  var fileInput = document.getElementById('labs-file');
+  var errorEl = document.getElementById('labs-error');
+  errorEl.innerHTML = '';
+  if (!fileInput.files.length) { errorEl.innerHTML = '<div class="empty">Choose a PDF file first.</div>'; return; }
+  var fd = new FormData();
+  fd.append('file', fileInput.files[0]);
+  errorEl.innerHTML = '<div class="empty">Reading the PDF…</div>';
+  try {
+    var resp = await fetch('{{ url_for("api_import_labs") }}', { method: 'POST', body: fd });
+    var data = await resp.json();
+    if (!data.ok) { errorEl.innerHTML = '<div class="disclaimer-box">' + data.error + '</div>'; return; }
+    errorEl.innerHTML = '';
+    extractedFilename = data.filename;
+    renderReviewRows(data.rows);
+    document.getElementById('labs-review-card').hidden = false;
+  } catch (e) {
+    errorEl.innerHTML = '<div class="disclaimer-box">Couldn’t read that PDF. If it’s a scanned image rather than a text PDF, automatic extraction won’t work — you can still enter values by hand on the dashboard.</div>';
+  }
+});
+
+function renderReviewRows(rows) {
+  var tbody = document.getElementById('labs-review-rows');
+  tbody.innerHTML = rows.map(function (r, i) {
+    var range = (r.ref_low != null ? r.ref_low : '') + (r.ref_low != null && r.ref_high != null ? '–' : '') + (r.ref_high != null ? r.ref_high : '');
+    return '<tr data-idx="' + i + '">' +
+      '<td><input type="checkbox" class="row-include" checked></td>' +
+      '<td><input type="text" class="row-label" value="' + (r.label || '').replace(/"/g, '&quot;') + '"></td>' +
+      '<td><input type="number" step="any" class="row-value" value="' + (r.value != null ? r.value : '') + '"></td>' +
+      '<td><input type="text" class="row-unit" value="' + (r.unit || '') + '"></td>' +
+      '<td><input type="text" class="row-range" value="' + range + '"></td>' +
+      '<td>' + (r.flag || '') + '</td>' +
+      '</tr>';
+  }).join('');
+}
+
+document.getElementById('labs-save-btn').addEventListener('click', async function () {
+  var date = document.getElementById('collected-date').value;
+  var resultEl = document.getElementById('labs-save-result');
+  if (!date) { resultEl.innerHTML = '<div class="disclaimer-box">Pick the date this panel was collected.</div>'; return; }
+  var rows = [];
+  document.querySelectorAll('#labs-review-rows tr').forEach(function (tr) {
+    if (!tr.querySelector('.row-include').checked) return;
+    var rangeRaw = tr.querySelector('.row-range').value.trim();
+    var refLow = null, refHigh = null;
+    var m = rangeRaw.match(/^([\d.]+)\s*–\s*([\d.]+)$/);
+    if (m) { refLow = parseFloat(m[1]); refHigh = parseFloat(m[2]); }
+    rows.push({
+      label: tr.querySelector('.row-label').value,
+      value: parseFloat(tr.querySelector('.row-value').value),
+      unit: tr.querySelector('.row-unit').value,
+      ref_low: refLow, ref_high: refHigh,
+    });
+  });
+  if (!rows.length) { resultEl.innerHTML = '<div class="disclaimer-box">Nothing checked — select at least one row to save.</div>'; return; }
+  var resp = await fetch('{{ url_for("api_save_labs") }}', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ collected_date: date, rows: rows, filename: extractedFilename }),
+  });
+  var data = await resp.json();
+  if (!data.ok) { resultEl.innerHTML = '<div class="disclaimer-box">' + (data.error || 'Save failed.') + '</div>'; return; }
+  resultEl.innerHTML = '<div class="card-hint" style="color:var(--good);">Saved ' + rows.length + ' results. <a href="' + location.href + '">Reload</a> to see it in the saved list below.</div>';
+});
+</script>
+</body>
+</html>
