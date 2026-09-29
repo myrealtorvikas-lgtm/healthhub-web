@@ -12,7 +12,11 @@
 <div class="wrap">
   <div class="topnav">
     <span class="brand">Health Hub</span>
-    <a class="small" href="{{ url_for('dashboard') }}">← Dashboard</a>
+    <div style="display:flex; align-items:center; gap:16px;">
+      <a class="small" href="https://claude.ai/artifact/NpK265hXB35RyWYZrm8jQr" target="_blank" rel="noopener">Recipes&#8599;</a>
+      <a class="small" href="https://claude.ai/artifact/V56MLs1dxau4yHeGPPeGfy" target="_blank" rel="noopener">Nutrition&#8599;</a>
+      <a class="small" href="{{ url_for('dashboard') }}">← Dashboard</a>
+    </div>
   </div>
 
   <div class="hero">
@@ -126,6 +130,14 @@
       <p class="card-hint">Beyond the core vitamins and minerals above. Treat this as a menu to pick from, not a checklist.</p>
       <div class="food-timeline" id="stack-timeline"></div>
       <div id="stack-rx-warning"></div>
+    </div>
+    <div class="card">
+      <p class="card-title">Want recipes to go with this?</p>
+      <p class="card-hint">A full recipe library and a longer nutrition &amp; lifestyle guide are kept as separate pages — general reference material, not tied to your personal data.</p>
+      <div class="btn-row">
+        <a class="btn btn-ghost" href="https://claude.ai/artifact/NpK265hXB35RyWYZrm8jQr" target="_blank" rel="noopener">Recipe Library &#8599;</a>
+        <a class="btn btn-ghost" href="https://claude.ai/artifact/V56MLs1dxau4yHeGPPeGfy" target="_blank" rel="noopener">Nutrition &amp; Lifestyle Guide &#8599;</a>
+      </div>
     </div>
   </section>
 
